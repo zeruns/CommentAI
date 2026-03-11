@@ -56,7 +56,9 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
             <h4 style="margin-top:0;">📖 插件说明</h4>
             <p>AI 智能评论回复插件，可以自动对评论进行AI回复，支持多个AI平台。</p>
             <p>请确保服务器支持 file_get_contents 或 curl 函数，并且能够访问外部API。</p>
-        </div>';
+            <p>硅基流动邀请链接：<a href="https://cloud.siliconflow.cn/i/hSviAP2x" target="_blank">https://cloud.siliconflow.cn/i/hSviAP2x</a></p>
+            <p>DMXAPI邀请链接：<a href="https://www.dmxapi.cn/register?aff=iu7m" target="_blank">https://www.dmxapi.cn/register?aff=iu7m</a></p>
+            </div>';
         $intro = new Typecho_Widget_Helper_Layout();
         $intro->html($html);
         $form->addItem($intro);
@@ -112,6 +114,8 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
                 'openai' => 'OpenAI（ChatGPT）',
                 'deepseek' => 'DeepSeek',
                 'kimi' => 'Kimi（月之暗面）',
+                'dmxapi' => 'DMXAPI',
+                'siliconflow' => '硅基流动',
                 'custom' => '自定义OpenAI兼容接口'
             ),
             'aliyun',
@@ -125,7 +129,7 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
             NULL,
             '',
             _t('API Key *'),
-            _t('填入你的AI服务API密钥。<a href="https://bailian.console.aliyun.com/" target="_blank">阿里云</a> | <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI</a> | <a href="https://platform.deepseek.com/" target="_blank">DeepSeek</a> | <a href="https://platform.moonshot.cn/" target="_blank">Kimi</a>')
+            _t('填入你的AI服务API密钥。<a href="https://www.aliyun.com/minisite/goods?userCode=jdjc69nf" target="_blank">阿里云</a> | <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI</a> | <a href="https://platform.deepseek.com/" target="_blank">DeepSeek</a> | <a href="https://platform.moonshot.cn/" target="_blank">Kimi</a> | <a href="https://curl.qcloud.com/nSqCfIZr" target="_blank">腾讯云</a>')
         );
         $apiKey->input->setAttribute('class', 'w-100');
         $form->addInput($apiKey->addRule('required', _t('API Key 不能为空')));
@@ -135,7 +139,7 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
             NULL,
             '',
             _t('API地址（可选）'),
-            _t('自定义API端点，留空使用默认值。<br>阿里云：https://dashscope.aliyuncs.com/compatible-mode/v1<br>OpenAI：https://api.openai.com/v1<br>DeepSeek：https://api.deepseek.com/v1<br>Kimi：https://api.moonshot.cn/v1')
+            _t('自定义API端点，留空使用默认值。<br>阿里云：https://dashscope.aliyuncs.com/compatible-mode/v1<br>OpenAI：https://api.openai.com/v1<br>DeepSeek：https://api.deepseek.com/v1<br>Kimi：https://api.moonshot.cn/v1<br>DMXAPI：https://www.dmxapi.cn/v1<br>硅基流动：https://api.siliconflow.cn/v1')
         );
         $apiEndpoint->input->setAttribute('class', 'w-100');
         $form->addInput($apiEndpoint);
@@ -279,6 +283,8 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
                 'openai' => 'OpenAI（ChatGPT）',
                 'deepseek' => 'DeepSeek',
                 'kimi' => 'Kimi（月之暗面）',
+                'dmxapi' => 'DMXAPI',
+                'siliconflow' => '硅基流动',
                 'custom' => '自定义OpenAI兼容接口'
             ),
             'aliyun',
