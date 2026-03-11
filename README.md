@@ -20,7 +20,7 @@
   - 仅建议模式：仅显示建议，不自动发布
 
 - 🌐 **多平台AI支持**
-  - ✅ [阿里云](https://www.aliyun.com/minisite/goods?userCode=jdjc69nf)百炼（通义千问 Qwen）
+  - ✅ [阿里云](https://www.aliyun.com/minisite/goods?userCode=jdjc69nf) 百炼（通义千问 Qwen）
   - ✅ OpenAI（ChatGPT）
   - ✅ [DeepSeek](https://platform.deepseek.com/)
   - ✅ [Kimi](https://platform.moonshot.cn/)（月之暗面）
