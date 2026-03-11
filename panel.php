@@ -503,15 +503,20 @@ $queueList = $manager->getQueueList($statusFilter, $currentPage, 20);
                         <a href="<?php 
                             $post = $db->fetchRow($db->select()->from($prefix . 'contents')->where('cid = ?', $item->post_id));
                             if ($post) {
-                                $post = (object)$post;
-                                echo Helper::options()->siteUrl . $post->slug . '.html#comment-' . $item->cid;
+                                // 直接使用数组，不转换为对象
+                                // 使用Typecho的API获取正确的永久链接
+                                $content = Typecho_Widget::widget('Widget_Abstract_Contents');
+                                $content->push($post);
+                                $permalink = $content->permalink;
+                                // 添加评论分页和锚点
+                                echo rtrim($permalink, '/') . '/comment-page-1#comment-' . $item->cid;
                             } else {
                                 echo '#';
                             }
                         ?>" target="_blank">
                             <?php 
                                 if ($post) {
-                                    echo htmlspecialchars($post->title); 
+                                    echo htmlspecialchars($post['title']); 
                                 } else {
                                     echo '文章已删除';
                                 }

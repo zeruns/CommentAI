@@ -4,7 +4,7 @@
  * 
  * @package CommentAI
  * @author 璇
- * @version 1.5.0
+ * @version 1.5.1
  * @link https://github.com/zeruns/CommentAI
  */
 
