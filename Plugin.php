@@ -1,11 +1,11 @@
 <?php
 /**
- * AI 智能评论回复插件
+ * AI 智能评论审核&回复插件
  * 
  * @package CommentAI
  * @author 璇
- * @version 1.3.0
- * @link https://github.com/BXCQ/CommentAI
+ * @version 1.5.0
+ * @link https://github.com/zeruns/CommentAI
  */
 
 if (!defined('__TYPECHO_ROOT_DIR__')) exit;
