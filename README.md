@@ -1,8 +1,8 @@
-# CommentAI - Typecho AI 智能评论回复插件
+# CommentAI - Typecho AI 智能评论审核&回复插件
 
 <div align="center">
 
-🤖 **让AI成为你的评论助手，自动生成高质量的回复内容**
+🤖 **让AI成为你的评论助手，自动审核评论，自动生成高质量的回复内容**
 
 [![Typecho](https://img.shields.io/badge/Typecho-1.2%2B-blue.svg)](http://typecho.org)
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
@@ -20,10 +20,12 @@
   - 仅建议模式：仅显示建议，不自动发布
 
 - 🌐 **多平台AI支持**
-  - ✅ 阿里云百炼（通义千问 Qwen）
+  - ✅ [阿里云](https://www.aliyun.com/minisite/goods?userCode=jdjc69nf)百炼（通义千问 Qwen）
   - ✅ OpenAI（ChatGPT）
-  - ✅ DeepSeek
-  - ✅ Kimi（月之暗面）
+  - ✅ [DeepSeek](https://platform.deepseek.com/)
+  - ✅ [Kimi](https://platform.moonshot.cn/)（月之暗面）
+  - ✅ [硅基流动](https://cloud.siliconflow.cn/i/hSviAP2x)：集合顶尖大模型的一站式云服务平台
+  - ✅ [DMXAPI](https://www.dmxapi.cn/register?aff=iu7m)：中国多模态大模型API聚合平台
   - ✅ 自定义 OpenAI 兼容接口
 
 - 🧠 **上下文感知**
@@ -36,6 +38,7 @@
   - API 调用频率限制
   - 防止垃圾评论触发
   - 仅对已审核评论回复
+  - 对评论内容进行审核，过滤违规内容
 
 - 🎨 **透明化显示**
   - 可选 AI 标识（如 🤖 AI辅助回复）
@@ -58,3 +61,7 @@
 
 如果觉得这个插件有用，请给个 ⭐ Star 支持一下！
 
+- **插件原开发者博主文章页：**[https://blog.ybyq.wang/archives/1527.html](https://blog.ybyq.wang/archives/1527.html)
+- **二次开发者博客主页：**[https://blog.zeruns.com/](https://blog.zeruns.com/)
+- **Zeruns博客英文站：**[https://blog.zeruns.top/](https://blog.zeruns.top/)
+- **VPS之家：**[https://blog.vpszj.cn/](https://blog.vpszj.cn/)
