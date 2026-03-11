@@ -23,6 +23,12 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
         // 注册评论提交后的钩子
         Typecho_Plugin::factory('Widget_Feedback')->finishComment = array('CommentAI_Plugin', 'onCommentSubmit');
         
+        // 注册评论状态更新的钩子
+        Typecho_Plugin::factory('Widget_Comments_Edit')->mark = array('CommentAI_Plugin', 'onCommentMark');
+        
+        // 注册评论删除的钩子
+        Typecho_Plugin::factory('Widget_Comments_Edit')->finishDelete = array('CommentAI_Plugin', 'onCommentDelete');
+        
         // 注册后台管理面板
         Helper::addPanel(3, 'CommentAI/panel.php', 'AI评论回复', 'AI评论回复管理', 'administrator');
         Helper::addAction('comment-ai', 'CommentAI_Action');
@@ -45,6 +51,16 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
     public static function config(Typecho_Widget_Helper_Form $form)
     {
         
+        
+        $html = '<div style="background:#f8f8f8;border:1px solid #e8e8e8;padding:15px;border-radius:4px;margin-bottom:20px;">
+            <h4 style="margin-top:0;">📖 插件说明</h4>
+            <p>AI 智能评论回复插件，可以自动对评论进行AI回复，支持多个AI平台。</p>
+            <p>请确保服务器支持 file_get_contents 或 curl 函数，并且能够访问外部API。</p>
+        </div>';
+        $intro = new Typecho_Widget_Helper_Layout();
+        $intro->html($html);
+        $form->addItem($intro);
+
         // === 基础配置 ===
         $basicTitle = new Typecho_Widget_Helper_Layout();
         $basicTitle->html('<h3 style="border-bottom:2px solid #467b96;padding-bottom:5px;">⚙️ 基础配置</h3>');
@@ -239,6 +255,89 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
         );
         $form->addInput($aiBadgeText);
 
+        // === AI审核配置 ===
+        $auditTitle = new Typecho_Widget_Helper_Layout();
+        $auditTitle->html('<h3 style="border-bottom:2px solid #467b96;padding-bottom:5px;margin-top:30px;">🔍 AI审核配置</h3>');
+        $form->addItem($auditTitle);
+
+        $enableAudit = new Typecho_Widget_Helper_Form_Element_Radio(
+            'enableAudit',
+            array(
+                '1' => '启用AI审核（评论先审核后回复）',
+                '0' => '禁用（直接处理评论）'
+            ),
+            '0',
+            _t('AI审核开关'),
+            _t('启用后，评论将先经过AI审核，通过后才会触发AI回复')
+        );
+        $form->addInput($enableAudit);
+
+        $auditProvider = new Typecho_Widget_Helper_Form_Element_Select(
+            'auditProvider',
+            array(
+                'aliyun' => '阿里云百炼（通义千问 Qwen）',
+                'openai' => 'OpenAI（ChatGPT）',
+                'deepseek' => 'DeepSeek',
+                'kimi' => 'Kimi（月之暗面）',
+                'custom' => '自定义OpenAI兼容接口'
+            ),
+            'aliyun',
+            _t('AI审核服务提供商'),
+            _t('选择用于审核的AI平台')
+        );
+        $form->addInput($auditProvider);
+
+        $auditApiKey = new Typecho_Widget_Helper_Form_Element_Text(
+            'auditApiKey',
+            NULL,
+            '',
+            _t('审核API Key'),
+            _t('填入审核服务的API密钥，留空则使用回复服务的API密钥')
+        );
+        $auditApiKey->input->setAttribute('class', 'w-100');
+        $form->addInput($auditApiKey);
+
+        $auditApiEndpoint = new Typecho_Widget_Helper_Form_Element_Text(
+            'auditApiEndpoint',
+            NULL,
+            '',
+            _t('审核API地址（可选）'),
+            _t('自定义审核API端点，留空使用默认值')
+        );
+        $auditApiEndpoint->input->setAttribute('class', 'w-100');
+        $form->addInput($auditApiEndpoint);
+
+        $auditModelName = new Typecho_Widget_Helper_Form_Element_Text(
+            'auditModelName',
+            NULL,
+            'qwen-plus',
+            _t('审核模型名称'),
+            _t('填入审核使用的模型标识，如：qwen-plus、gpt-4o-mini等')
+        );
+        $form->addInput($auditModelName);
+
+        $auditThreshold = new Typecho_Widget_Helper_Form_Element_Text(
+            'auditThreshold',
+            NULL,
+            '0.8',
+            _t('审核阈值'),
+            _t('审核通过的置信度阈值，0-1之间，越高越严格')
+        );
+        $form->addInput($auditThreshold);
+
+        $auditFailAction = new Typecho_Widget_Helper_Form_Element_Select(
+            'auditFailAction',
+            array(
+                'reject' => '直接拦截（标记为垃圾评论）',
+                'pending' => '标记为待人工审核',
+                'ignore' => '忽略（继续处理但不标记）'
+            ),
+            'reject',
+            _t('审核失败处理策略'),
+            _t('当AI审核未通过时的处理方式')
+        );
+        $form->addInput($auditFailAction);
+
         // === 触发条件 ===
         $triggerTitle = new Typecho_Widget_Helper_Layout();
         $triggerTitle->html('<h3 style="border-bottom:2px solid #467b96;padding-bottom:5px;margin-top:30px;">⚡ 触发条件</h3>');
@@ -381,22 +480,6 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
             }
         }
         
-        // 应用触发条件过滤
-        $triggerCondition = $pluginConfig->triggerCondition ? $pluginConfig->triggerCondition : array();
-        
-        // 检查是否需要跳过
-        if (in_array('approved_only', $triggerCondition) && $commentData['status'] != 'approved') {
-            return;
-        }
-        
-        if (in_array('no_spam', $triggerCondition) && $commentData['status'] == 'spam') {
-            return;
-        }
-        
-        if (in_array('no_trackback', $triggerCondition) && ($commentData['type'] == 'trackback' || $commentData['type'] == 'pingback')) {
-            return;
-        }
-
         // 检查频率限制
         if (!self::checkRateLimit($pluginConfig)) {
             return;
@@ -437,6 +520,100 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
         } catch (Exception $e) {
             return true; // 出错时允许调用
         }
+    }
+
+    /**
+     * 评论状态更新钩子
+     */
+    public static function onCommentMark($comment, $widget, $status)
+    {
+        // 处理状态变更为approved的情况
+        if ($status == 'approved') {
+            // 获取插件配置
+            $options = Helper::options();
+            $pluginConfig = $options->plugin('CommentAI');
+            
+            // 检查插件是否启用
+            if (!$pluginConfig->enablePlugin) {
+                return $comment;
+            }
+            
+            // 检查是否是管理员评论（排除作者自己的评论）
+            $adminUid = intval($pluginConfig->adminUid ?: 1);
+            if (intval($comment['authorId']) == $adminUid) {
+                self::log('跳过管理员自己的评论');
+                return $comment;
+            }
+            
+            self::log('评论状态更新为approved，coid: ' . $comment['coid']);
+            
+            // 异步处理AI回复
+            try {
+                require_once __DIR__ . '/ReplyManager.php';
+                $manager = new CommentAI_ReplyManager($pluginConfig);
+                
+                // 先检查队列中是否已有该评论的记录
+                $db = Typecho_Db::get();
+                $prefix = $db->getPrefix();
+                $existing = $db->fetchRow($db->select()
+                    ->from($prefix . 'comment_ai_queue')
+                    ->where('cid = ?', $comment['coid'])
+                );
+                
+                if ($existing) {
+                    // 如果队列中已有记录，先删除旧记录，再重新处理
+                    self::log('队列中已有记录，删除旧记录后重新处理');
+                    $db->query($db->delete($prefix . 'comment_ai_queue')
+                        ->where('cid = ?', $comment['coid'])
+                    );
+                }
+                
+                // 直接处理已人工审核通过的评论，跳过AI审核
+                $commentData = array(
+                    'coid' => $comment['coid'],
+                    'author' => $comment['author'],
+                    'text' => $comment['text'],
+                    'status' => $status,
+                    'type' => $comment['type'],
+                    'parent' => $comment['parent'],
+                    'cid' => $comment['cid']
+                );
+                
+                // 调用专门的处理方法，跳过AI审核，跳过延迟
+                self::log('开始处理已人工审核通过的评论');
+                $manager->processManuallyApprovedComment($commentData, true);
+                
+            } catch (Exception $e) {
+                // 静默失败，不影响评论操作
+                self::log('AI回复处理失败: ' . $e->getMessage());
+            }
+        }
+        
+        return $comment;
+    }
+
+    /**
+     * 评论删除钩子
+     */
+    public static function onCommentDelete($comment, $widget)
+    {
+        // 从插件队列中删除对应的记录
+        try {
+            $db = Typecho_Db::get();
+            $prefix = $db->getPrefix();
+            
+            // 删除队列中的记录
+            $db->query($db->delete($prefix . 'comment_ai_queue')
+                ->where('cid = ?', $comment['coid'])
+            );
+            
+            self::log('评论已删除，从队列中移除记录: ' . $comment['coid']);
+        } catch (Exception $e) {
+            // 静默失败，不影响评论删除操作
+            self::log('删除队列记录失败: ' . $e->getMessage());
+        }
+        
+        return $comment;
     }
 
     /**
