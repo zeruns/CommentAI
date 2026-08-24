@@ -43,7 +43,12 @@ class CommentAI_ReplyManager
 
         file_put_contents($scheduleFile, json_encode($scheduleData, JSON_UNESCAPED_UNICODE));
         CommentAI_Plugin::log('已写入计划任务: coid=' . $commentData['coid']);
-        $this->triggerBackgroundProcess();
+
+        // 异步触发后台处理，失败则同步兜底处理，确保评论不会因触发失败而漏掉回复
+        if (!$this->triggerBackgroundProcess()) {
+            CommentAI_Plugin::log('后台触发失败，改为同步处理计划任务', 'WARN');
+            $this->processScheduledTasks();
+        }
     }
 
     /**
@@ -467,6 +472,8 @@ class CommentAI_ReplyManager
     /**
      * 触发后台处理
      * Typecho 1.3.0 使用官方 Helper::requestService；1.2.1 使用支持 HTTPS 的短超时 curl
+     *
+     * @return bool 是否成功触发（false 表示需要同步兜底处理）
      */
     private function triggerBackgroundProcess()
     {
@@ -474,7 +481,7 @@ class CommentAI_ReplyManager
             try {
                 Helper::requestService('commentAiProcess');
                 CommentAI_Plugin::log('已通过 Widget_Service 触发异步处理');
-                return;
+                return true;
             } catch (Exception $e) {
                 CommentAI_Plugin::log('requestService 失败，回退 HTTP 触发: ' . $e->getMessage(), 'WARN');
             }
@@ -485,20 +492,40 @@ class CommentAI_ReplyManager
 
         if (!function_exists('curl_init')) {
             CommentAI_Plugin::log('未启用 curl，无法触发后台处理', 'ERROR');
-            return;
+            return false;
         }
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT_MS, 800);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, 500);
+        curl_setopt($ch, CURLOPT_TIMEOUT_MS, 1000);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, 800);
         curl_setopt($ch, CURLOPT_NOSIGNAL, 1);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
         curl_exec($ch);
+        $errno = curl_errno($ch);
+        $error = curl_error($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-        CommentAI_Plugin::log('已通过 HTTP 触发后台处理');
+
+        // 后台进程收到请求后即同步处理计划任务，且 ignore_user_abort 保证客户端断连后继续执行。
+        // 因此 errno=0（正常完成）与 errno=28（操作超时，但请求已送达、服务端仍在处理）均视为触发成功；
+        // 仅连接层错误（无法解析主机 6 / 无法建立连接 7 等）才说明请求未送达，判定触发失败并同步兜底。
+        $connectFailed = array(
+            CURLE_COULDNT_RESOLVE_HOST, // 6
+            CURLE_COULDNT_CONNECT,      // 7
+        );
+        if (in_array($errno, $connectFailed, true)) {
+            CommentAI_Plugin::log(
+                'HTTP 触发后台处理失败: errno=' . $errno . ', error=' . $error,
+                'ERROR'
+            );
+            return false;
+        }
+
+        CommentAI_Plugin::log('已通过 HTTP 触发后台处理 (http=' . $httpCode . ', errno=' . $errno . ')');
+        return true;
     }
 
     /**
