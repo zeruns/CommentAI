@@ -140,7 +140,21 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
             NULL,
             '',
             _t('API Key'),
-            _t('填入 AI 服务密钥。Ollama 可留空。<a href="https://www.aliyun.com/benefit/client/cross?userCode=jdjc69nf" target="_blank">阿里云</a> | <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI</a> | <a href="https://platform.deepseek.com/" target="_blank">DeepSeek</a> | <a href="https://platform.moonshot.cn/" target="_blank">Kimi</a> | <a href="https://www.bigmodel.cn/invite?icode=H4n0wpqCk7LlT6cKeY4kPbC%2Fk7jQAKmT1mpEiZXXnFw%3D" target="_blank">智谱</a> | <a href="https://console.volcengine.com/ark" target="_blank">豆包</a> | <a href="https://cloud.siliconflow.cn/i/hSviAP2x" target="_blank">硅基流动</a> | <a href="https://aistudio.google.com/apikey" target="_blank">Gemini</a> | <a href="https://console.anthropic.com/" target="_blank">Claude</a> | <a href="https://openrouter.ai/" target="_blank">OpenRouter</a> | <a href="https://console.groq.com/" target="_blank">Groq</a> | <a href="https://console.x.ai/" target="_blank">xAI</a>')
+            _t(
+                '填入 AI 服务密钥。Ollama 可留空。'
+                . '<a href="https://www.aliyun.com/benefit/client/cross?userCode=jdjc69nf" target="_blank">阿里云</a> | '
+                . '<a href="https://platform.openai.com/api-keys" target="_blank">OpenAI</a> | '
+                . '<a href="https://platform.deepseek.com/" target="_blank">DeepSeek</a> | '
+                . '<a href="https://platform.moonshot.cn/" target="_blank">Kimi</a> | '
+                . '<a href="https://www.bigmodel.cn/invite?icode=H4n0wpqCk7LlT6cKeY4kPbC%2Fk7jQAKmT1mpEiZXXnFw%3D" target="_blank">智谱</a> | '
+                . '<a href="https://console.volcengine.com/ark" target="_blank">豆包</a> | '
+                . '<a href="https://cloud.siliconflow.cn/i/hSviAP2x" target="_blank">硅基流动</a> | '
+                . '<a href="https://aistudio.google.com/apikey" target="_blank">Gemini</a> | '
+                . '<a href="https://console.anthropic.com/" target="_blank">Claude</a> | '
+                . '<a href="https://openrouter.ai/" target="_blank">OpenRouter</a> | '
+                . '<a href="https://console.groq.com/" target="_blank">Groq</a> | '
+                . '<a href="https://console.x.ai/" target="_blank">xAI</a>'
+            )
         );
         $apiKey->input->setAttribute('class', 'w-100');
         $form->addInput($apiKey);
@@ -150,7 +164,22 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
             NULL,
             '',
             _t('API地址（可选）'),
-            _t('自定义端点，留空使用默认值。<br>阿里云：https://dashscope.aliyuncs.com/compatible-mode/v1<br>OpenAI：https://api.openai.com/v1<br>DeepSeek：https://api.deepseek.com/v1<br>Kimi：https://api.moonshot.cn/v1<br>智谱：https://open.bigmodel.cn/api/paas/v4<br>豆包：https://ark.cn-beijing.volces.com/api/v3<br>硅基流动：https://api.siliconflow.cn/v1<br>Gemini：https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent<br>Claude：https://api.anthropic.com<br>OpenRouter：https://openrouter.ai/api/v1<br>Groq：https://api.groq.com/openai/v1<br>xAI：https://api.x.ai/v1<br>Ollama：http://127.0.0.1:11434/v1')
+            _t(
+                '自定义端点，留空使用默认值。<br>'
+                . '阿里云：https://dashscope.aliyuncs.com/compatible-mode/v1<br>'
+                . 'OpenAI：https://api.openai.com/v1<br>'
+                . 'DeepSeek：https://api.deepseek.com/v1<br>'
+                . 'Kimi：https://api.moonshot.cn/v1<br>'
+                . '智谱：https://open.bigmodel.cn/api/paas/v4<br>'
+                . '豆包：https://ark.cn-beijing.volces.com/api/v3<br>'
+                . '硅基流动：https://api.siliconflow.cn/v1<br>'
+                . 'Gemini：https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent<br>'
+                . 'Claude：https://api.anthropic.com<br>'
+                . 'OpenRouter：https://openrouter.ai/api/v1<br>'
+                . 'Groq：https://api.groq.com/openai/v1<br>'
+                . 'xAI：https://api.x.ai/v1<br>'
+                . 'Ollama：http://127.0.0.1:11434/v1'
+            )
         );
         $apiEndpoint->input->setAttribute('class', 'w-100');
         $form->addInput($apiEndpoint);
@@ -684,9 +713,6 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
             return;
         }
 
-        // 标记来源：AI审核已在 comment 过滤器(写库前)同步完成，异步处理无需重复审核
-        $commentData['skipAudit'] = true;
-
         try {
             require_once __DIR__ . '/ReplyManager.php';
             $manager = new CommentAI_ReplyManager($pluginConfig);
@@ -745,9 +771,11 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
         $oneHourAgo = time() - 3600;
 
         try {
+            // 仅统计实际触发 AI 回复调用的记录（ai_reply 非空），排除审核失败等未调用 API 的记录
             $count = $db->fetchObject($db->select('COUNT(*) as count')
                 ->from($prefix . 'comment_ai_queue')
                 ->where('created_at > ?', $oneHourAgo)
+                ->where('ai_reply != ?', '')
             )->count;
 
             return $count < $rateLimit;
@@ -795,6 +823,9 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
             $backupFile = __DIR__ . '/runtime.log.1';
             @rename($logFile, $backupFile);
         }
+
+        // 清理换行与回车，防止评论内容中的换行符造成日志注入
+        $message = str_replace(array("\r\n", "\r", "\n"), ' ', (string)$message);
 
         $time = date('Y-m-d H:i:s');
         $logMessage = "[{$time}] [{$level}] {$message}\n";

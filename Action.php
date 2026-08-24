@@ -54,7 +54,8 @@ class CommentAI_Action extends Typecho_Widget implements Widget_Interface_Do
             ignore_user_abort(true);
         }
         if (function_exists('set_time_limit')) {
-            @set_time_limit(60);
+            // AI 调用超时 38s + 余量，放宽到 120s 避免长回复被中断
+            set_time_limit(120);
         }
 
         try {

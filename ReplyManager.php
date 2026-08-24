@@ -73,52 +73,14 @@ class CommentAI_ReplyManager
             throw new Exception('文章不存在');
         }
 
-        $skipAudit = isset($commentData['skipAudit']) ? (bool)$commentData['skipAudit'] : false;
-
-        $this->processSingleComment($comment, $post, $skipAudit);
+        $this->processSingleComment($comment, $post);
     }
 
     /**
-     * 处理单条评论
+     * 处理单条评论（仅负责生成回复；评论内容审核已由写库前的 comment 过滤器同步完成）
      */
-    private function processSingleComment($comment, $post, $skipAudit = false)
+    private function processSingleComment($comment, $post)
     {
-        // AI 审核（后台人工审核通过的评论无需再走 AI 审核）
-        if (!$skipAudit && $this->config->enableAudit) {
-            CommentAI_Plugin::log('启用了AI审核，开始审核评论: coid=' . $comment->coid);
-
-            require_once __DIR__ . '/AIAuditService.php';
-            $auditService = new CommentAI_AIAuditService($this->config);
-
-            try {
-                $auditResult = $auditService->auditComment($comment->text);
-                CommentAI_Plugin::log('审核结果: ' . json_encode($auditResult, JSON_UNESCAPED_UNICODE));
-
-                if (!$auditResult['passed']) {
-                    $this->handleAuditFailure($comment, $auditResult);
-                    return;
-                }
-
-                $this->updateCommentStatus($comment->coid, 'approved');
-                $comment->status = 'approved';
-                CommentAI_Plugin::log('评论审核通过，状态已更新为approved，继续处理');
-            } catch (Exception $e) {
-                CommentAI_Plugin::log('审核服务错误: ' . $e->getMessage(), 'WARN');
-                if ($this->config->auditFailAction != 'ignore') {
-                    $this->saveToQueue(
-                        $comment->coid,
-                        $comment->cid,
-                        $comment->author,
-                        $comment->text,
-                        '',
-                        'rejected',
-                        '审核服务错误: ' . $e->getMessage()
-                    );
-                    return;
-                }
-            }
-        }
-
         if ($this->isLowValueComment($comment->text)) {
             $fixedReply = $this->config->lowValueReply ?: '感谢你的关注和支持！欢迎常来交流～';
             $this->finalizeReply($comment, $fixedReply);
@@ -156,13 +118,6 @@ class CommentAI_ReplyManager
             $this->finalizeReply($comment, $aiReply);
         } catch (Exception $e) {
             $this->saveToQueue($comment->coid, $comment->cid, $comment->author, $comment->text, '', 'error', $e->getMessage());
-
-            // AI 审核通过后回复生成失败，回滚评论状态为待审核，避免审核通过的评论无回复
-            if (!$skipAudit && $this->config->enableAudit && $comment->status === 'approved') {
-                $this->updateCommentStatus($comment->coid, 'waiting');
-                CommentAI_Plugin::log('AI 回复生成失败，评论状态已回滚为 waiting');
-            }
-
             throw $e;
         }
     }
@@ -294,13 +249,15 @@ class CommentAI_ReplyManager
     }
 
     /**
-     * 检查评论是否已在队列中
+     * 检查评论是否已进入回复流程（已有 AI 回复内容或已发布/错误记录）
+     * 审核失败（空 ai_reply）的记录不算，避免阻塞人工审核通过后的重新调度
      */
     public function isInQueue($coid)
     {
         $existing = $this->db->fetchRow($this->db->select()
             ->from($this->prefix . 'comment_ai_queue')
             ->where('cid = ?', $coid)
+            ->where('ai_reply != ?', '')
         );
         return !empty($existing);
     }
@@ -560,6 +517,14 @@ class CommentAI_ReplyManager
                 continue;
             }
 
+            // 兜底清理：计划任务超过 24 小时未处理的孤儿文件（如后台触发一直失败）
+            $created = isset($data['created']) ? intval($data['created']) : 0;
+            if ($created > 0 && ($now - $created) > 86400) {
+                CommentAI_Plugin::log('清理过期计划任务文件: ' . basename($file), 'WARN');
+                @unlink($file);
+                continue;
+            }
+
             if ($data['processTime'] > $now) {
                 continue;
             }
@@ -705,72 +670,6 @@ class CommentAI_ReplyManager
         }
 
         return array('success' => $success, 'failed' => $failed);
-    }
-
-    /**
-     * 处理审核失败的评论
-     */
-    private function handleAuditFailure($comment, $auditResult)
-    {
-        $action = $this->config->auditFailAction ?: 'reject';
-
-        switch ($action) {
-            case 'reject':
-                $this->updateCommentStatus($comment->coid, 'spam');
-                $this->saveToQueue(
-                    $comment->coid,
-                    $comment->cid,
-                    $comment->author,
-                    $comment->text,
-                    '',
-                    'rejected',
-                    '审核未通过: ' . $auditResult['reason']
-                );
-                CommentAI_Plugin::log('评论已被标记为垃圾评论: ' . $comment->coid);
-                break;
-
-            case 'pending':
-                $this->updateCommentStatus($comment->coid, 'waiting');
-                $this->saveToQueue(
-                    $comment->coid,
-                    $comment->cid,
-                    $comment->author,
-                    $comment->text,
-                    '',
-                    'pending',
-                    '待人工审核: ' . $auditResult['reason']
-                );
-                CommentAI_Plugin::log('评论已标记为待人工审核: ' . $comment->coid);
-                break;
-
-            case 'ignore':
-                $this->saveToQueue(
-                    $comment->coid,
-                    $comment->cid,
-                    $comment->author,
-                    $comment->text,
-                    '',
-                    'ignored',
-                    '审核未通过但已忽略: ' . $auditResult['reason']
-                );
-                CommentAI_Plugin::log('评论审核未通过但已忽略: ' . $comment->coid);
-                break;
-        }
-    }
-
-    /**
-     * 更新评论状态
-     */
-    private function updateCommentStatus($coid, $status)
-    {
-        try {
-            $this->db->query($this->db->update($this->prefix . 'comments')
-                ->rows(array('status' => $status))
-                ->where('coid = ?', $coid)
-            );
-        } catch (Exception $e) {
-            CommentAI_Plugin::log('更新评论状态失败: ' . $e->getMessage(), 'ERROR');
-        }
     }
 
     /**
