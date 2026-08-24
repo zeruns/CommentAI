@@ -28,6 +28,8 @@
   - ✅ [DMXAPI](https://www.dmxapi.cn/register?aff=iu7m)：中国多模态大模型API聚合平台
   - ✅ 自定义 OpenAI 兼容接口
 
+  > 🔗 **各家AI大模型API平台推荐与简介：** [https://blog.zeruns.com/archives/947.html](https://blog.zeruns.com/archives/947.html)
+
 - 🧠 **上下文感知**
   - 读取文章标题和摘要
   - 分析父级评论（回复场景）
