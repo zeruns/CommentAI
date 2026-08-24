@@ -20,7 +20,7 @@
   - Suggestion-Only Mode: Only shows suggestions, never auto-publishes
 
 - 🌐 **Multi-Platform AI Support**
-  - ✅ [Alibaba Cloud](https://www.aliyun.com/minisite/goods?userCode=jdjc69nf) Bailian (Tongyi Qianwen Qwen)
+  - ✅ [Alibaba Cloud](https://www.aliyun.com/benefit/client/cross?userCode=jdjc69nf) Bailian (Tongyi Qianwen Qwen)
   - ✅ OpenAI (ChatGPT)
   - ✅ [DeepSeek](https://platform.deepseek.com/)
   - ✅ [Kimi](https://platform.moonshot.cn/) (Moonshot AI)

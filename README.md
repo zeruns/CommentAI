@@ -58,7 +58,7 @@ usr/plugins/CommentAI/
 - **AI 评论审核**（本 Fork 新增）：启用后评论先经过 AI 审核，通过才触发回复；未通过可拦截为垃圾评论、转待人工审核或忽略
 - **全自动 / 人工审核**：生成后直接发布，或先进入后台队列
 - 🌐 **多平台AI支持**
-  - ✅ [阿里云](https://www.aliyun.com/minisite/goods?userCode=jdjc69nf)百炼（通义千问 Qwen）
+  - ✅ [阿里云](https://www.aliyun.com/benefit/client/cross?userCode=jdjc69nf)百炼（通义千问 Qwen）
   - ✅ OpenAI（ChatGPT）
   - ✅ [DeepSeek](https://platform.deepseek.com/)
   - ✅ [Kimi](https://platform.moonshot.cn/)（月之暗面）
@@ -94,7 +94,7 @@ usr/plugins/CommentAI/
 
 | 平台 | 默认 API 地址 | 模型示例 |
 |------|----------------|----------|
-| [阿里云](https://www.aliyun.com/minisite/goods?userCode=jdjc69nf)百炼 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` |
+| [阿里云](https://www.aliyun.com/benefit/client/cross?userCode=jdjc69nf)百炼 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` |
 | OpenAI | `https://api.openai.com/v1` | `gpt-5-mini` |
 | [DeepSeek](https://platform.deepseek.com/) | `https://api.deepseek.com/v1` | `deepseek-chat` |
 | [Kimi](https://platform.moonshot.cn/)（月之暗面） | `https://api.moonshot.cn/v1` | `kimi-k2` |

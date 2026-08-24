@@ -104,7 +104,7 @@ abstract class CommentAI_BaseProvider
     /**
      * 执行 HTTP POST 请求
      */
-    protected function httpPost($url, $headers, $body, $timeout = 30)
+    protected function httpPost($url, $headers, $body, $timeout = 38)
     {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
