@@ -488,6 +488,26 @@ class CommentAI_ReplyManager
     }
 
     /**
+     * 记录写库前 AI 审核未通过/异常的评论到队列（供面板查看，不生成回复）
+     *
+     * @param array $commentData 评论数据数组
+     * @param string $status 队列状态：rejected / pending
+     * @param string $reason 失败原因
+     */
+    public function recordAuditFail($commentData, $status, $reason)
+    {
+        $this->saveToQueue(
+            intval($commentData['coid']),
+            intval($commentData['cid']),
+            isset($commentData['author']) ? $commentData['author'] : '',
+            isset($commentData['text']) ? $commentData['text'] : '',
+            '',
+            $status,
+            $reason
+        );
+    }
+
+    /**
      * 触发后台处理
      * Typecho 1.3.0 使用官方 Helper::requestService；1.2.1 使用支持 HTTPS 的短超时 curl
      */

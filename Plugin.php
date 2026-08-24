@@ -13,6 +13,14 @@ if (!defined('__TYPECHO_ROOT_DIR__')) exit;
 class CommentAI_Plugin implements Typecho_Plugin_Interface
 {
     /**
+     * 写库前 AI 审核未通过/异常时的结果，用于 finishComment 阶段写入队列
+     * null 表示审核通过或未执行
+     *
+     * @var array|null ['status' => 'rejected'|'pending', 'reason' => string]
+     */
+    private static $auditFailResult = null;
+
+    /**
      * 激活插件方法
      */
     public static function activate()
@@ -462,6 +470,20 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
     {
         $commentData = self::normalizeComment($comment);
         self::log('finishComment 触发: ' . json_encode($commentData, JSON_UNESCAPED_UNICODE));
+
+        // 写库前 AI 审核未通过/异常：写入队列记录供面板查看，不进入回复流程
+        if (self::$auditFailResult !== null) {
+            self::log('审核未通过，写入队列记录: coid=' . $commentData['coid'] . ', status=' . self::$auditFailResult['status']);
+            try {
+                require_once __DIR__ . '/ReplyManager.php';
+                $manager = new CommentAI_ReplyManager(Helper::options()->plugin('CommentAI'));
+                $manager->recordAuditFail($commentData, self::$auditFailResult['status'], self::$auditFailResult['reason']);
+            } catch (Exception $e) {
+                self::log('写入审核队列记录失败: ' . $e->getMessage(), 'ERROR');
+            }
+            return;
+        }
+
         self::dispatchComment($commentData, false);
     }
 
@@ -476,6 +498,9 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
     public static function onCommentFilter($comment, $content)
     {
         $pluginConfig = Helper::options()->plugin('CommentAI');
+
+        // 重置审核结果
+        self::$auditFailResult = null;
 
         // 插件或审核未启用，直接放行
         if (!$pluginConfig->enablePlugin || !$pluginConfig->enableAudit) {
@@ -504,15 +529,18 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
 
             if (!$auditResult['passed']) {
                 $action = $pluginConfig->auditFailAction ?: 'reject';
+                $reason = isset($auditResult['reason']) && !empty($auditResult['reason']) ? $auditResult['reason'] : '内容不符合规范';
                 switch ($action) {
                     case 'reject':
                         // 直接拦截为垃圾评论
                         $comment['status'] = 'spam';
+                        self::$auditFailResult = array('status' => 'rejected', 'reason' => $reason);
                         self::log('审核未通过，已拦截为垃圾评论');
                         break;
                     case 'pending':
                         // 标记为待人工审核
                         $comment['status'] = 'waiting';
+                        self::$auditFailResult = array('status' => 'pending', 'reason' => $reason);
                         self::log('审核未通过，已标记为待人工审核');
                         break;
                     case 'ignore':
@@ -522,16 +550,11 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
                 }
             }
         } catch (Exception $e) {
-            // 审核服务异常：按策略处理，避免因审核服务故障导致所有评论被拦或直接发布
+            // 审核服务异常：评论自动转为待人工审核，交给人工处理
             self::log('同步审核服务异常: ' . $e->getMessage(), 'WARN');
-            $action = $pluginConfig->auditFailAction ?: 'reject';
-            if ($action == 'reject') {
-                // 审核服务不可用时保守处理：放行，避免误伤正常评论
-                self::log('审核服务不可用，放行评论', 'WARN');
-            } elseif ($action == 'pending') {
-                $comment['status'] = 'waiting';
-                self::log('审核服务不可用，评论转待人工审核');
-            }
+            $comment['status'] = 'waiting';
+            self::$auditFailResult = array('status' => 'pending', 'reason' => '审核服务异常: ' . $e->getMessage());
+            self::log('审核服务异常，评论转待人工审核');
         }
 
         return $comment;

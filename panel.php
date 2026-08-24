@@ -12,8 +12,6 @@ if (!defined('__TYPECHO_ADMIN__')) {
 }
 
 require_once dirname(__DIR__) . '/../../admin/common.php';
-require_once dirname(__DIR__) . '/../../admin/header.php';
-require_once dirname(__DIR__) . '/../../admin/menu.php';
 
 $config = Helper::options()->plugin('CommentAI');
 $db = Typecho_Db::get();
@@ -22,7 +20,7 @@ $prefix = $db->getPrefix();
 require_once __DIR__ . '/ReplyManager.php';
 $manager = new CommentAI_ReplyManager($config);
 
-// 处理操作请求
+// 处理操作请求（必须在输出 header 之前，以便处理完成后重定向显示提示）
 $do = isset($_GET['do']) ? $_GET['do'] : null;
 if ($do && Typecho_Widget::widget('Widget_User')->pass('administrator', true)) {
     try {
@@ -40,13 +38,13 @@ if ($do && Typecho_Widget::widget('Widget_User')->pass('administrator', true)) {
                     Typecho_Widget::widget('Widget_Notice')->set('❌ ' . $result['message'], 'error');
                 }
                 break;
-            
+
             case 'clean':
                 $days = isset($_GET['days']) ? intval($_GET['days']) : 30;
                 $manager->cleanOldQueue($days);
                 Typecho_Widget::widget('Widget_Notice')->set("✅ 已清理 {$days} 天前的旧记录", 'success');
                 break;
-            
+
             case 'publish':
                 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
                 if ($id) {
@@ -54,7 +52,7 @@ if ($do && Typecho_Widget::widget('Widget_User')->pass('administrator', true)) {
                     Typecho_Widget::widget('Widget_Notice')->set('✅ 回复已发布', 'success');
                 }
                 break;
-            
+
             case 'reject':
                 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
                 if ($id) {
@@ -62,7 +60,7 @@ if ($do && Typecho_Widget::widget('Widget_User')->pass('administrator', true)) {
                     Typecho_Widget::widget('Widget_Notice')->set('✅ 已拒绝该回复', 'success');
                 }
                 break;
-            
+
             case 'regenerate':
                 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
                 if ($id) {
@@ -93,7 +91,20 @@ if ($do && Typecho_Widget::widget('Widget_User')->pass('administrator', true)) {
     } catch (Exception $e) {
         Typecho_Widget::widget('Widget_Notice')->set('❌ 操作失败: ' . $e->getMessage(), 'error');
     }
+
+    // 处理后重定向回面板（保留状态筛选与页码），使操作提示立即显示
+    $redirectParams = array('panel' => 'CommentAI/panel.php');
+    if (isset($_GET['status']) && $_GET['status'] !== '') {
+        $redirectParams['status'] = $_GET['status'];
+    }
+    if (isset($_GET['page']) && intval($_GET['page']) > 1) {
+        $redirectParams['page'] = intval($_GET['page']);
+    }
+    $response->redirect(Helper::options()->adminUrl . 'extending.php?' . http_build_query($redirectParams));
 }
+
+require_once dirname(__DIR__) . '/../../admin/header.php';
+require_once dirname(__DIR__) . '/../../admin/menu.php';
 
 // 获取统计信息
 $stats = $manager->getQueueStats();
