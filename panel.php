@@ -29,7 +29,7 @@ if ($do && Typecho_Widget::widget('Widget_User')->pass('administrator', true)) {
         switch ($do) {
             case 'test':
                 require_once __DIR__ . '/AIService.php';
-                $aiService = new CommentAI_AIService($config);
+                $aiService = CommentAI_AIService::create($config);
                 $result = $aiService->testConnection();
                 if ($result['success']) {
                     Typecho_Widget::widget('Widget_Notice')->set(
@@ -78,11 +78,16 @@ if ($do && Typecho_Widget::widget('Widget_User')->pass('administrator', true)) {
                                 'type' => $comment['type'],
                                 'parent' => $comment['parent'],
                                 'cid' => $comment['cid']
-                            ));
+                            ), true);
                             Typecho_Widget::widget('Widget_Notice')->set('✅ 已重新生成回复', 'success');
                         }
                     }
                 }
+                break;
+
+            case 'clear_log':
+                CommentAI_Plugin::clearLog();
+                Typecho_Widget::widget('Widget_Notice')->set('✅ 日志已清空', 'success');
                 break;
         }
     } catch (Exception $e) {
@@ -323,7 +328,6 @@ $queueList = $manager->getQueueList($statusFilter, $currentPage, 20);
 .status-badge.published { background: #d4edda; color: #155724; }
 .status-badge.rejected { background: #f8d7da; color: #721c24; }
 .status-badge.error { background: #f8d7da; color: #721c24; }
-.status-badge.suggest { background: #d1ecf1; color: #0c5460; }
 
 /* 内容框 */
 .comment-box, .reply-box {
@@ -421,10 +425,6 @@ $queueList = $manager->getQueueList($statusFilter, $currentPage, 20);
             <div class="label">已拒绝</div>
             <div class="number"><?php echo $stats['rejected']; ?></div>
         </div>
-        <div class="stat-card">
-            <div class="label">仅建议</div>
-            <div class="number"><?php echo $stats['suggest']; ?></div>
-        </div>
         <div class="stat-card error">
             <div class="label">错误</div>
             <div class="number"><?php echo $stats['error']; ?></div>
@@ -478,9 +478,6 @@ $queueList = $manager->getQueueList($statusFilter, $currentPage, 20);
         <a href="?panel=CommentAI%2Fpanel.php&status=rejected" class="<?php echo $statusFilter == 'rejected' ? 'active' : ''; ?>">
             已拒绝 (<?php echo $stats['rejected']; ?>)
         </a>
-        <a href="?panel=CommentAI%2Fpanel.php&status=suggest" class="<?php echo $statusFilter == 'suggest' ? 'active' : ''; ?>">
-            仅建议 (<?php echo $stats['suggest']; ?>)
-        </a>
         <a href="?panel=CommentAI%2Fpanel.php&status=error" class="<?php echo $statusFilter == 'error' ? 'active' : ''; ?>">
             错误 (<?php echo $stats['error']; ?>)
         </a>
@@ -533,7 +530,6 @@ $queueList = $manager->getQueueList($statusFilter, $currentPage, 20);
                                 'pending' => '⏳ 待审核',
                                 'published' => '✅ 已发布',
                                 'rejected' => '❌ 已拒绝',
-                                'suggest' => '💡 仅建议',
                                 'error' => '⚠️ 错误'
                             );
                             echo isset($statusText[$item->status]) ? $statusText[$item->status] : $item->status;
@@ -563,7 +559,7 @@ $queueList = $manager->getQueueList($statusFilter, $currentPage, 20);
                 </div>
 
                 <div class="action-buttons">
-                    <?php if ($item->status == 'pending' || $item->status == 'suggest'): ?>
+                    <?php if ($item->status == 'pending'): ?>
                         <a href="<?php echo Helper::security()->getTokenUrl(Helper::options()->adminUrl . 'extending.php?panel=CommentAI%2Fpanel.php&do=publish&id=' . $item->id); ?>" 
                            class="btn btn-success" 
                            onclick="return confirm('确定要发布这条AI回复吗？');">
@@ -577,14 +573,18 @@ $queueList = $manager->getQueueList($statusFilter, $currentPage, 20);
                             <span class="btn-text">拒绝回复</span>
                         </a>
                     <?php endif; ?>
-                    
-                    <?php if ($item->status == 'error' || $item->status == 'rejected'): ?>
-                        <a href="<?php echo Helper::security()->getTokenUrl(Helper::options()->adminUrl . 'extending.php?panel=CommentAI%2Fpanel.php&do=regenerate&id=' . $item->id); ?>" 
-                           class="btn btn-warning">
-                            <span class="btn-icon">🔄</span>
-                            <span class="btn-text">重新生成</span>
-                        </a>
-                    <?php endif; ?>
+
+                    <?php
+                    $regenerateConfirm = $item->status == 'published'
+                        ? '将覆盖前台已发布的 AI 回复，确定重新生成吗？'
+                        : '确定要重新生成这条回复吗？';
+                    ?>
+                    <a href="<?php echo Helper::security()->getTokenUrl(Helper::options()->adminUrl . 'extending.php?panel=CommentAI%2Fpanel.php&do=regenerate&id=' . $item->id); ?>"
+                       class="btn btn-warning"
+                       onclick="return confirm('<?php echo $regenerateConfirm; ?>');">
+                        <span class="btn-icon">🔄</span>
+                        <span class="btn-text">重新生成</span>
+                    </a>
 
                     <a href="<?php echo Helper::options()->adminUrl . 'manage-comments.php?coid=' . $item->cid; ?>" 
                        class="btn btn-primary" 
@@ -596,6 +596,47 @@ $queueList = $manager->getQueueList($statusFilter, $currentPage, 20);
             </div>
         <?php endforeach; ?>
     <?php endif; ?>
+
+    <!-- 日志查看 -->
+    <div style="margin-top:40px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+            <h3 style="margin:0;border-bottom:2px solid #467b96;padding-bottom:5px;display:inline-block;">📋 运行日志</h3>
+            <div style="display:flex;gap:10px;">
+                <a href="<?php echo Helper::options()->adminUrl . 'extending.php?panel=CommentAI%2Fpanel.php'; ?>"
+                   class="btn btn-refresh" style="font-size:12px;padding:6px 12px;">
+                    刷新日志
+                </a>
+                <a href="<?php echo Helper::security()->getTokenUrl(Helper::options()->adminUrl . 'extending.php?panel=CommentAI%2Fpanel.php&do=clear_log'); ?>"
+                   class="btn btn-clean" style="font-size:12px;padding:6px 12px;"
+                   onclick="return confirm('确定要清空所有日志吗？');">
+                    清空日志
+                </a>
+            </div>
+        </div>
+        <?php
+        $logContent = CommentAI_Plugin::readLog(200);
+        if (empty($logContent)):
+        ?>
+            <div style="background:#f9f9f9;border:1px solid #ddd;border-radius:6px;padding:30px;text-align:center;color:#999;">
+                暂无日志记录
+            </div>
+        <?php else: ?>
+            <div style="background:#1e1e1e;color:#d4d4d4;border-radius:6px;padding:15px;font-family:Consolas,'Courier New',monospace;font-size:13px;line-height:1.6;max-height:500px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;"><?php
+                $lines = explode("\n", $logContent);
+                foreach ($lines as $line) {
+                    if (strpos($line, '[ERROR]') !== false) {
+                        echo '<span style="color:#f44747;">' . htmlspecialchars($line) . "</span>\n";
+                    } elseif (strpos($line, '[WARN]') !== false) {
+                        echo '<span style="color:#dcdcaa;">' . htmlspecialchars($line) . "</span>\n";
+                    } elseif (strpos($line, '[INFO]') !== false) {
+                        echo '<span style="color:#4ec9b0;">' . htmlspecialchars($line) . "</span>\n";
+                    } else {
+                        echo htmlspecialchars($line) . "\n";
+                    }
+                }
+            ?></div>
+        <?php endif; ?>
+    </div>
 </div>
 
 <?php
