@@ -23,6 +23,8 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
         Typecho_Plugin::factory('Widget_Feedback')->finishComment = array('CommentAI_Plugin', 'onCommentSubmit');
         // 后台回复评论
         Typecho_Plugin::factory('Widget_Comments_Edit')->finishComment = array('CommentAI_Plugin', 'onCommentSubmit');
+        // 评论写入数据库前的过滤器（同步 AI 审核，未通过则直接改为垃圾/待审，避免违规评论发布）
+        Typecho_Plugin::factory('Widget_Feedback')->comment = array('CommentAI_Plugin', 'onCommentFilter');
         // 后台审核通过（$comment 为数组，钩子在写库前触发）
         Typecho_Plugin::factory('Widget_Comments_Edit')->mark = array('CommentAI_Plugin', 'onCommentApproved');
         // 后台删除评论（同步清理队列记录）
@@ -464,6 +466,78 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
     }
 
     /**
+     * 评论写入数据库前的过滤器：同步执行 AI 审核
+     * 审核未通过时直接改写评论状态，避免违规评论发布到前台
+     *
+     * @param array $comment 评论数据数组
+     * @param mixed $content 文章对象
+     * @return array 处理后的评论数据
+     */
+    public static function onCommentFilter($comment, $content)
+    {
+        $pluginConfig = Helper::options()->plugin('CommentAI');
+
+        // 插件或审核未启用，直接放行
+        if (!$pluginConfig->enablePlugin || !$pluginConfig->enableAudit) {
+            return $comment;
+        }
+
+        // 管理员自己的评论不审核
+        $adminUid = intval($pluginConfig->adminUid ?: 1);
+        if (!empty($comment['authorId']) && intval($comment['authorId']) === $adminUid) {
+            return $comment;
+        }
+
+        // 仅审核评论类型（引用/trackback 走另一条流程）
+        if (empty($comment['text'])) {
+            return $comment;
+        }
+
+        self::log('同步AI审核开始（写库前）: ' . mb_substr($comment['text'], 0, 50, 'UTF-8'));
+
+        try {
+            require_once __DIR__ . '/AIAuditService.php';
+            $auditService = new CommentAI_AIAuditService($pluginConfig);
+            $auditResult = $auditService->auditComment($comment['text']);
+
+            self::log('审核结果: ' . json_encode($auditResult, JSON_UNESCAPED_UNICODE));
+
+            if (!$auditResult['passed']) {
+                $action = $pluginConfig->auditFailAction ?: 'reject';
+                switch ($action) {
+                    case 'reject':
+                        // 直接拦截为垃圾评论
+                        $comment['status'] = 'spam';
+                        self::log('审核未通过，已拦截为垃圾评论');
+                        break;
+                    case 'pending':
+                        // 标记为待人工审核
+                        $comment['status'] = 'waiting';
+                        self::log('审核未通过，已标记为待人工审核');
+                        break;
+                    case 'ignore':
+                        // 忽略，保持原状态继续
+                        self::log('审核未通过但已忽略');
+                        break;
+                }
+            }
+        } catch (Exception $e) {
+            // 审核服务异常：按策略处理，避免因审核服务故障导致所有评论被拦或直接发布
+            self::log('同步审核服务异常: ' . $e->getMessage(), 'WARN');
+            $action = $pluginConfig->auditFailAction ?: 'reject';
+            if ($action == 'reject') {
+                // 审核服务不可用时保守处理：放行，避免误伤正常评论
+                self::log('审核服务不可用，放行评论', 'WARN');
+            } elseif ($action == 'pending') {
+                $comment['status'] = 'waiting';
+                self::log('审核服务不可用，评论转待人工审核');
+            }
+        }
+
+        return $comment;
+    }
+
+    /**
      * 后台标记评论状态
      * Typecho 1.2.1: pluginHandle()->mark($comment数组, $edit, $status)
      * Typecho 1.3.0: pluginHandle()->call('mark', $comment数组, $edit, $status)
@@ -587,8 +661,8 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
             return;
         }
 
-        // 标记来源，供后续跳过 AI 审核（后台人工审核通过后无需再走 AI 审核）
-        $commentData['skipAudit'] = $fromApproved;
+        // 标记来源：AI审核已在 comment 过滤器(写库前)同步完成，异步处理无需重复审核
+        $commentData['skipAudit'] = true;
 
         try {
             require_once __DIR__ . '/ReplyManager.php';
