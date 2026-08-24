@@ -57,7 +57,15 @@ usr/plugins/CommentAI/
 
 - **AI 评论审核**（本 Fork 新增）：启用后评论先经过 AI 审核，通过才触发回复；未通过可拦截为垃圾评论、转待人工审核或忽略
 - **全自动 / 人工审核**：生成后直接发布，或先进入后台队列
-- **多平台接入**：阿里云百炼、OpenAI、DeepSeek、Kimi、智谱 GLM、火山引擎豆包、硅基流动、DMXAPI、Gemini、Claude、OpenRouter、Groq、xAI Grok、Ollama、自定义 OpenAI 兼容接口
+- 🌐 **多平台AI支持**
+  - ✅ [阿里云](https://www.aliyun.com/minisite/goods?userCode=jdjc69nf)百炼（通义千问 Qwen）
+  - ✅ OpenAI（ChatGPT）
+  - ✅ [DeepSeek](https://platform.deepseek.com/)
+  - ✅ [Kimi](https://platform.moonshot.cn/)（月之暗面）
+  - ✅ [硅基流动](https://cloud.siliconflow.cn/i/hSviAP2x)：集合顶尖大模型的一站式云服务平台
+  - ✅ [DMXAPI](https://www.dmxapi.cn/register?aff=iu7m)：中国多模态大模型API聚合平台
+  - ✅ 智谱 GLM、火山引擎豆包、Gemini、Claude、OpenRouter、Groq、xAI Grok、Ollama
+  - ✅ 自定义 OpenAI 兼容接口
 - **上下文感知**：文章标题、摘要、最多 10 层评论链
 - **低价值过滤**：命中「感谢」「666」等关键词时使用固定回复，不消耗 API
 - **审核后回复**：开启「仅对已审核的评论回复」时，后台点「通过」才会生成
@@ -87,14 +95,14 @@ usr/plugins/CommentAI/
 
 | 平台 | 默认 API 地址 | 模型示例 |
 |------|----------------|----------|
-| 阿里云百炼 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` |
+| [阿里云](https://www.aliyun.com/minisite/goods?userCode=jdjc69nf)百炼 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` |
 | OpenAI | `https://api.openai.com/v1` | `gpt-5-mini` |
-| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` |
-| Kimi | `https://api.moonshot.cn/v1` | `kimi-k2` |
+| [DeepSeek](https://platform.deepseek.com/) | `https://api.deepseek.com/v1` | `deepseek-chat` |
+| [Kimi](https://platform.moonshot.cn/)（月之暗面） | `https://api.moonshot.cn/v1` | `kimi-k2` |
 | 智谱 GLM | `https://open.bigmodel.cn/api/paas/v4` | `glm-4.5` |
 | 火山引擎豆包 | `https://ark.cn-beijing.volces.com/api/v3` | 控制台中的接入点 ID |
-| 硅基流动 | `https://api.siliconflow.cn/v1` | `Qwen/Qwen3-8B` |
-| DMXAPI | `https://www.dmxapi.cn/v1` | 平台提供的模型标识 |
+| [硅基流动](https://cloud.siliconflow.cn/i/hSviAP2x) | `https://api.siliconflow.cn/v1` | `Qwen/Qwen3-8B` |
+| [DMXAPI](https://www.dmxapi.cn/register?aff=iu7m) | `https://www.dmxapi.cn/v1` | 平台提供的模型标识 |
 | Google Gemini | Gemini 原生接口 | `gemini-2.5-flash` |
 | Anthropic Claude | `https://api.anthropic.com` | `claude-sonnet-5` |
 | OpenRouter | `https://openrouter.ai/api/v1` | `openai/gpt-5-mini` |
