@@ -63,7 +63,7 @@ usr/plugins/CommentAI/
   - ✅ [DeepSeek](https://platform.deepseek.com/)
   - ✅ [Kimi](https://platform.moonshot.cn/)（月之暗面）
   - ✅ [硅基流动](https://cloud.siliconflow.cn/i/hSviAP2x)：集合顶尖大模型的一站式云服务平台
-  - ✅ 智谱 GLM、火山引擎豆包、Gemini、Claude、OpenRouter、Groq、xAI Grok、Ollama
+  - ✅ [智谱 GLM](https://www.bigmodel.cn/invite?icode=H4n0wpqCk7LlT6cKeY4kPbC%2Fk7jQAKmT1mpEiZXXnFw%3D)、火山引擎豆包、Gemini、Claude、OpenRouter、Groq、xAI Grok、Ollama
   - ✅ 自定义 OpenAI 兼容接口
 - **上下文感知**：文章标题、摘要、最多 10 层评论链
 - **低价值过滤**：命中「感谢」「666」等关键词时使用固定回复，不消耗 API
@@ -98,7 +98,7 @@ usr/plugins/CommentAI/
 | OpenAI | `https://api.openai.com/v1` | `gpt-5-mini` |
 | [DeepSeek](https://platform.deepseek.com/) | `https://api.deepseek.com/v1` | `deepseek-chat` |
 | [Kimi](https://platform.moonshot.cn/)（月之暗面） | `https://api.moonshot.cn/v1` | `kimi-k2` |
-| 智谱 GLM | `https://open.bigmodel.cn/api/paas/v4` | `glm-4.5` |
+| [智谱 GLM](https://www.bigmodel.cn/invite?icode=H4n0wpqCk7LlT6cKeY4kPbC%2Fk7jQAKmT1mpEiZXXnFw%3D) | `https://open.bigmodel.cn/api/paas/v4` | `glm-4.5` |
 | 火山引擎豆包 | `https://ark.cn-beijing.volces.com/api/v3` | 控制台中的接入点 ID |
 | [硅基流动](https://cloud.siliconflow.cn/i/hSviAP2x) | `https://api.siliconflow.cn/v1` | `Qwen/Qwen3-8B` |
 | Google Gemini | Gemini 原生接口 | `gemini-2.5-flash` |
