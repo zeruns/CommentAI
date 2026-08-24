@@ -55,7 +55,6 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
             <p>AI 智能评论审核&回复插件，可以自动审核评论并生成 AI 回复，支持多个 AI 平台。</p>
             <p>请确保服务器支持 file_get_contents 或 curl 函数，并且能够访问外部 API。</p>
             <p>硅基流动邀请链接：<a href="https://cloud.siliconflow.cn/i/hSviAP2x" target="_blank">https://cloud.siliconflow.cn/i/hSviAP2x</a></p>
-            <p>DMXAPI 邀请链接：<a href="https://www.dmxapi.cn/register?aff=iu7m" target="_blank">https://www.dmxapi.cn/register?aff=iu7m</a></p>
         </div>';
         $intro = new Typecho_Widget_Helper_Layout();
         $intro->html($html);
@@ -112,7 +111,6 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
                 'zhipu' => '智谱 GLM',
                 'volcengine' => '火山引擎（豆包）',
                 'siliconflow' => '硅基流动 SiliconFlow',
-                'dmxapi' => 'DMXAPI',
                 'gemini' => 'Google Gemini',
                 'claude' => 'Anthropic Claude',
                 'openrouter' => 'OpenRouter',
@@ -132,7 +130,7 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
             NULL,
             '',
             _t('API Key'),
-            _t('填入 AI 服务密钥。Ollama 可留空。<a href="https://bailian.console.aliyun.com/" target="_blank">阿里云</a> | <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI</a> | <a href="https://platform.deepseek.com/" target="_blank">DeepSeek</a> | <a href="https://platform.moonshot.cn/" target="_blank">Kimi</a> | <a href="https://open.bigmodel.cn/" target="_blank">智谱</a> | <a href="https://console.volcengine.com/ark" target="_blank">豆包</a> | <a href="https://cloud.siliconflow.cn/" target="_blank">硅基流动</a> | <a href="https://www.dmxapi.cn/" target="_blank">DMXAPI</a> | <a href="https://aistudio.google.com/apikey" target="_blank">Gemini</a> | <a href="https://console.anthropic.com/" target="_blank">Claude</a> | <a href="https://openrouter.ai/" target="_blank">OpenRouter</a> | <a href="https://console.groq.com/" target="_blank">Groq</a> | <a href="https://console.x.ai/" target="_blank">xAI</a>')
+            _t('填入 AI 服务密钥。Ollama 可留空。<a href="https://bailian.console.aliyun.com/" target="_blank">阿里云</a> | <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI</a> | <a href="https://platform.deepseek.com/" target="_blank">DeepSeek</a> | <a href="https://platform.moonshot.cn/" target="_blank">Kimi</a> | <a href="https://open.bigmodel.cn/" target="_blank">智谱</a> | <a href="https://console.volcengine.com/ark" target="_blank">豆包</a> | <a href="https://cloud.siliconflow.cn/" target="_blank">硅基流动</a> | <a href="https://aistudio.google.com/apikey" target="_blank">Gemini</a> | <a href="https://console.anthropic.com/" target="_blank">Claude</a> | <a href="https://openrouter.ai/" target="_blank">OpenRouter</a> | <a href="https://console.groq.com/" target="_blank">Groq</a> | <a href="https://console.x.ai/" target="_blank">xAI</a>')
         );
         $apiKey->input->setAttribute('class', 'w-100');
         $form->addInput($apiKey);
@@ -142,7 +140,7 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
             NULL,
             '',
             _t('API地址（可选）'),
-            _t('自定义端点，留空使用默认值。<br>阿里云：https://dashscope.aliyuncs.com/compatible-mode/v1<br>OpenAI：https://api.openai.com/v1<br>DeepSeek：https://api.deepseek.com/v1<br>Kimi：https://api.moonshot.cn/v1<br>智谱：https://open.bigmodel.cn/api/paas/v4<br>豆包：https://ark.cn-beijing.volces.com/api/v3<br>硅基流动：https://api.siliconflow.cn/v1<br>DMXAPI：https://www.dmxapi.cn/v1<br>Gemini：https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent<br>Claude：https://api.anthropic.com<br>OpenRouter：https://openrouter.ai/api/v1<br>Groq：https://api.groq.com/openai/v1<br>xAI：https://api.x.ai/v1<br>Ollama：http://127.0.0.1:11434/v1')
+            _t('自定义端点，留空使用默认值。<br>阿里云：https://dashscope.aliyuncs.com/compatible-mode/v1<br>OpenAI：https://api.openai.com/v1<br>DeepSeek：https://api.deepseek.com/v1<br>Kimi：https://api.moonshot.cn/v1<br>智谱：https://open.bigmodel.cn/api/paas/v4<br>豆包：https://ark.cn-beijing.volces.com/api/v3<br>硅基流动：https://api.siliconflow.cn/v1<br>Gemini：https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent<br>Claude：https://api.anthropic.com<br>OpenRouter：https://openrouter.ai/api/v1<br>Groq：https://api.groq.com/openai/v1<br>xAI：https://api.x.ai/v1<br>Ollama：http://127.0.0.1:11434/v1')
         );
         $apiEndpoint->input->setAttribute('class', 'w-100');
         $form->addInput($apiEndpoint);
@@ -310,7 +308,6 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
                 'openai' => 'OpenAI（ChatGPT）',
                 'deepseek' => 'DeepSeek',
                 'kimi' => 'Kimi（月之暗面）',
-                'dmxapi' => 'DMXAPI',
                 'siliconflow' => '硅基流动',
                 'custom' => '自定义OpenAI兼容接口'
             ),

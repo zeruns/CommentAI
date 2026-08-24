@@ -63,7 +63,6 @@ usr/plugins/CommentAI/
   - ✅ [DeepSeek](https://platform.deepseek.com/)
   - ✅ [Kimi](https://platform.moonshot.cn/)（月之暗面）
   - ✅ [硅基流动](https://cloud.siliconflow.cn/i/hSviAP2x)：集合顶尖大模型的一站式云服务平台
-  - ✅ [DMXAPI](https://www.dmxapi.cn/register?aff=iu7m)：中国多模态大模型API聚合平台
   - ✅ 智谱 GLM、火山引擎豆包、Gemini、Claude、OpenRouter、Groq、xAI Grok、Ollama
   - ✅ 自定义 OpenAI 兼容接口
 - **上下文感知**：文章标题、摘要、最多 10 层评论链
@@ -102,7 +101,6 @@ usr/plugins/CommentAI/
 | 智谱 GLM | `https://open.bigmodel.cn/api/paas/v4` | `glm-4.5` |
 | 火山引擎豆包 | `https://ark.cn-beijing.volces.com/api/v3` | 控制台中的接入点 ID |
 | [硅基流动](https://cloud.siliconflow.cn/i/hSviAP2x) | `https://api.siliconflow.cn/v1` | `Qwen/Qwen3-8B` |
-| [DMXAPI](https://www.dmxapi.cn/register?aff=iu7m) | `https://www.dmxapi.cn/v1` | 平台提供的模型标识 |
 | Google Gemini | Gemini 原生接口 | `gemini-2.5-flash` |
 | Anthropic Claude | `https://api.anthropic.com` | `claude-sonnet-5` |
 | OpenRouter | `https://openrouter.ai/api/v1` | `openai/gpt-5-mini` |

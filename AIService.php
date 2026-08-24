@@ -39,7 +39,6 @@ class CommentAI_AIService
             case 'zhipu':
             case 'volcengine':
             case 'siliconflow':
-            case 'dmxapi':
             case 'openrouter':
             case 'groq':
             case 'xai':

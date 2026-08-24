@@ -2,7 +2,7 @@
 /**
  * OpenAI 兼容接口适配器
  * 支持：OpenAI、阿里云百炼、DeepSeek、Kimi、智谱、豆包、硅基流动、
- *      DMXAPI、OpenRouter、Groq、xAI、Ollama、自定义兼容接口
+ *      OpenRouter、Groq、xAI、Ollama、自定义兼容接口
  *
  * @package CommentAI
  */
@@ -49,8 +49,6 @@ class CommentAI_OpenAIProvider extends CommentAI_BaseProvider
                 return 'https://ark.cn-beijing.volces.com/api/v3';
             case 'siliconflow':
                 return 'https://api.siliconflow.cn/v1';
-            case 'dmxapi':
-                return 'https://www.dmxapi.cn/v1';
             case 'openrouter':
                 return 'https://openrouter.ai/api/v1';
             case 'groq':

@@ -25,7 +25,6 @@
   - ✅ [DeepSeek](https://platform.deepseek.com/)
   - ✅ [Kimi](https://platform.moonshot.cn/) (Moonshot AI)
   - ✅ [SiliconFlow](https://cloud.siliconflow.cn/i/hSviAP2x): a one-stop cloud platform aggregating top-tier LLMs
-  - ✅ [DMXAPI](https://www.dmxapi.cn/register?aff=iu7m): a Chinese multimodal LLM API aggregation platform
   - ✅ Custom OpenAI-compatible endpoints
 
   > 🔗 **Recommendations & Introduction to Major AI LLM API Platforms:** [https://blog.zeruns.com/archives/947.html](https://blog.zeruns.com/archives/947.html)
