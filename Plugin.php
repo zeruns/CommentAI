@@ -336,7 +336,7 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
             ),
             '0',
             _t('AI审核开关'),
-            _t('启用后，评论将先经过AI审核，通过后才会触发AI回复')
+            _t('启用后，评论提交时先经AI同步审核：通过则自动通过审核并触发AI回复；不通过按下方策略拦截或转待人工审核')
         );
         $form->addInput($enableAudit);
 
@@ -567,7 +567,7 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
                         self::log('审核未通过，已拦截为垃圾评论');
                         break;
                     case 'pending':
-                        // 标记为待人工审核
+                        // 标记为待人工审核（Typecho 开启强制审核时保持 waiting 等待人工处理）
                         $comment['status'] = 'waiting';
                         self::$auditFailResult = array('status' => 'pending', 'reason' => $reason);
                         self::log('审核未通过，已标记为待人工审核');
@@ -577,6 +577,11 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
                         self::log('审核未通过但已忽略');
                         break;
                 }
+            } else {
+                // 审核通过：即使 Typecho 开启「所有评论必须经过审核」也自动放行，
+                // 避免正常评论卡在待审核列表等待人工处理
+                $comment['status'] = 'approved';
+                self::log('审核通过，评论已自动设为 approved');
             }
         } catch (Exception $e) {
             // 审核服务异常：评论自动转为待人工审核，交给人工处理
