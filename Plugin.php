@@ -94,7 +94,7 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
             ),
             'audit',
             _t('回复模式'),
-            _t('选择AI生成回复后的处理方式')
+            _t('选择AI生成回复后的处理方式。开启AI审核后，违规评论已在提交时被拦截，建议搭配「全自动模式」，让正常评论的AI回复直接发布到前台')
         );
         $form->addInput($replyMode);
 
@@ -325,7 +325,8 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
         $form->addInput($aiBadgeText);
 
         $auditTitle = new Typecho_Widget_Helper_Layout();
-        $auditTitle->html('<h3 style="border-bottom:2px solid #467b96;padding-bottom:5px;margin-top:30px;">🔍 AI审核配置</h3>');
+        $auditTitle->html('<h3 style="border-bottom:2px solid #467b96;padding-bottom:5px;margin-top:30px;">🔍 AI审核配置</h3>'
+            . '<p style="color:#666;margin:5px 0 15px;">提示：AI审核通过会自动放行评论。若希望AI回复也直接发布到前台，请将上方「回复模式」设为「全自动模式」。</p>');
         $form->addItem($auditTitle);
 
         $enableAudit = new Typecho_Widget_Helper_Form_Element_Radio(
