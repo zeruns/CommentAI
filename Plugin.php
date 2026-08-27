@@ -21,6 +21,14 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
     private static $auditFailResult = null;
 
     /**
+     * 写库前 AI 审核是否已通过（用于 finishComment 阶段强制进入回复调度，
+     * 消除 filter 链其他插件改写 status、以及 approved_only 触发条件对审核已通过评论的误拦截）
+     *
+     * @var bool
+     */
+    private static $auditPassed = false;
+
+    /**
      * 激活插件方法
      */
     public static function activate()
@@ -433,6 +441,143 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
     }
 
     /**
+     * 配置持久化钩子
+     * Typecho 在「启用插件」(isInit=true) 与「保存设置」(isInit=false) 时都会回调本方法。
+     * 返回 true 表示插件已自行处理配置读写，Typecho 不再走默认的 configPlugin 流程。
+     *
+     * 作用：Typecho 禁用插件时会删除 plugin:CommentAI 配置行，导致重新启用后配置丢失。
+     * 这里将配置额外备份到独立行 plugin:CommentAI_persist（禁用时不会被删除），
+     * 启用时自动恢复，实现禁用/启用配置不丢失。
+     *
+     * @param array $settings 表单值（启用时为默认值，保存时为用户填写的值）
+     * @param bool $isInit 是否为插件启用时的初始化
+     * @return bool
+     */
+    public static function configHandle($settings, $isInit)
+    {
+        if ($isInit) {
+            // 启用插件：尝试从备份恢复配置
+            $persisted = self::readPersistedConfig();
+            if ($persisted !== null) {
+                // 备份覆盖默认值，插件新增字段自动用默认值补齐
+                $merged = array_merge((array)$settings, $persisted);
+                self::writeConfig($merged);
+                return true;
+            }
+
+            // 无备份：首次启用，写入默认值作为初始备份，仍走默认流程初始化
+            if (!empty($settings)) {
+                self::writePersistConfig($settings);
+            }
+            return false;
+        }
+
+        // 保存设置：同时写入运行时行与备份行
+        self::writeConfig($settings);
+        self::writePersistConfig($settings);
+        return true;
+    }
+
+    /**
+     * 读取持久化备份配置
+     *
+     * @return array|null
+     */
+    private static function readPersistedConfig()
+    {
+        try {
+            $db = Typecho_Db::get();
+            $row = $db->fetchRow($db->select('value')
+                ->from('table.options')
+                ->where('name = ?', 'plugin:CommentAI_persist')
+                ->where('user = ?', 0)
+            );
+            if (empty($row)) {
+                return null;
+            }
+            $value = @unserialize($row['value']);
+            return is_array($value) ? $value : null;
+        } catch (Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * 写入备份行（仅备份，不影响运行时读取）
+     *
+     * @param array $settings
+     */
+    private static function writePersistConfig($settings)
+    {
+        try {
+            $db = Typecho_Db::get();
+            $name = 'plugin:CommentAI_persist';
+            $row = $db->fetchRow($db->select('value')
+                ->from('table.options')
+                ->where('name = ?', $name)
+                ->where('user = ?', 0)
+            );
+
+            if (empty($row)) {
+                $db->query($db->insert('table.options')
+                    ->rows(array(
+                        'name' => $name,
+                        'value' => serialize($settings),
+                        'user' => 0
+                    )));
+            } else {
+                $value = @unserialize($row['value']);
+                $value = is_array($value) ? $value : array();
+                $db->query($db->update('table.options')
+                    ->rows(array('value' => serialize(array_merge($value, $settings))))
+                    ->where('name = ?', $name)
+                    ->where('user = ?', 0)
+                );
+            }
+        } catch (Exception $e) {
+            // 备份失败不影响主流程
+        }
+    }
+
+    /**
+     * 写入运行时配置行（Helper::options()->plugin 读取的行）
+     * 按 Typecho configPlugin 相同的 upsert+merge 语义
+     *
+     * @param array $settings
+     */
+    private static function writeConfig($settings)
+    {
+        try {
+            $db = Typecho_Db::get();
+            $name = 'plugin:CommentAI';
+            $row = $db->fetchRow($db->select('value')
+                ->from('table.options')
+                ->where('name = ?', $name)
+                ->where('user = ?', 0)
+            );
+
+            if (empty($row)) {
+                $db->query($db->insert('table.options')
+                    ->rows(array(
+                        'name' => $name,
+                        'value' => serialize($settings),
+                        'user' => 0
+                    )));
+            } else {
+                $value = @unserialize($row['value']);
+                $value = is_array($value) ? $value : array();
+                $db->query($db->update('table.options')
+                    ->rows(array('value' => serialize(array_merge($value, $settings))))
+                    ->where('name = ?', $name)
+                    ->where('user = ?', 0)
+                );
+            }
+        } catch (Exception $e) {
+            // 写入失败不影响主流程
+        }
+    }
+
+    /**
      * 创建数据库表
      */
     private static function createTable()
@@ -514,7 +659,14 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
             return;
         }
 
-        self::dispatchComment($commentData, false);
+        // AI 审核已通过：强制归一为 approved，确保后续 approved_only 触发条件与
+        // filter 链其他插件对 status 的改写不会误拦截已放行的评论
+        $auditPassed = self::$auditPassed;
+        if ($auditPassed) {
+            $commentData['status'] = 'approved';
+        }
+
+        self::dispatchComment($commentData, $auditPassed);
     }
 
     /**
@@ -531,6 +683,7 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
 
         // 重置审核结果
         self::$auditFailResult = null;
+        self::$auditPassed = false;
 
         // 插件或审核未启用，直接放行
         if (!$pluginConfig->enablePlugin || !$pluginConfig->enableAudit) {
@@ -582,6 +735,7 @@ class CommentAI_Plugin implements Typecho_Plugin_Interface
                 // 审核通过：即使 Typecho 开启「所有评论必须经过审核」也自动放行，
                 // 避免正常评论卡在待审核列表等待人工处理
                 $comment['status'] = 'approved';
+                self::$auditPassed = true;
                 self::log('审核通过，评论已自动设为 approved');
             }
         } catch (Exception $e) {
